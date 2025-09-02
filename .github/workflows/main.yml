@@ -20,6 +20,8 @@ jobs:
         run: |
           pwd
           ls -R
+      - name: Add repo root to PYTHONPATH
+        run: echo "PYTHONPATH=$PYTHONPATH:${GITHUB_WORKSPACE}" >> $GITHUB_ENV
       - name: Test with pytest
         working-directory: ${{github.workspace }}
         run: pytest -q
