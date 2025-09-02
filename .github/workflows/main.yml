@@ -1,0 +1,41 @@
+name: Status Feeds to Slack
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # UTC
+  workflow_dispatch:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    if: github.event_name != 'schedule'   # skip on cron
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r requirements.txt
+      - name: List repo files (debug)
+        run: |
+          pwd
+          ls -R
+      - name: Test with pytest (only if tests exist)
+        if: hashFiles('tests/**/*.py') != ''
+        run: pytest -q
+
+  monitor:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r requirements.txt
+      - name: Run status monitor
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          FEEDS_YAML: ./feeds.yml
+          STATE_PATH: ./status_state.json
+        run: python main.py
