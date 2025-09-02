@@ -2,38 +2,68 @@ name: Status Feeds to Slack
 
 on:
   schedule:
-    - cron: "*/5 * * * *"   # UTC
+    - cron: "*/5 * * * *"     # every 5 minutes (UTC)
   workflow_dispatch:
   push:
   pull_request:
 
+permissions:
+  contents: write     # allow the monitor job to push updated state
+
+concurrency:
+  group: status-monitor
+  cancel-in-progress: false
+
 jobs:
   tests:
-    if: github.event_name != 'schedule'   # skip on cron
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
-      - run: pip install -r requirements.txt
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies (incl. pytest)
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pyyaml
+
       - name: List repo files (debug)
         run: |
           pwd
           ls -R
+
       - name: Add repo root to PYTHONPATH
         run: echo "PYTHONPATH=$PYTHONPATH:${GITHUB_WORKSPACE}" >> $GITHUB_ENV
+
       - name: Test with pytest
-        working-directory: ${{github.workspace }}
+        working-directory: ${{ github.workspace }}
         run: pytest -q
 
   monitor:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
-      - run: pip install -r requirements.txt
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}   # used for pushing state later
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
       - name: Run status monitor
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
@@ -41,3 +71,16 @@ jobs:
           FEEDS_YAML: ./feeds.yml
           STATE_PATH: ./status_state.json
         run: python main.py
+
+      - name: Commit updated state (if changed)
+        run: |
+          if git diff --quiet --exit-code -- status_state.json; then
+            echo "No state changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add status_state.json
+          # Use [skip ci] so this push doesn't trigger tests again
+          git commit -m "chore(state): update status_state.json [skip ci]"
+          git push
