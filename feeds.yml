@@ -1,0 +1,52 @@
+# feeds.yml
+defaults:
+  positive_keywords: ["outage", "degraded", "partial", "incident", "major", "disruptions","disruption"]
+  negative_keywords: ["resolved", "postmortem", "monitoring"]
+  dedupe_minutes: 120               # don’t alert same title across any feed for 2 hours
+  route:
+    channel: "#platform-status"     # used only in Bot mode
+    mention_on_major: false         # set true if you want @channel for "major/outage"
+
+feeds:
+  - name: "Facebook Ads Manager"
+    url: "https://metastatus.com/outage-events-feed-ads-manager.rss"     # e.g. FB Graph/Platform API feed
+    positive_keywords: ["outage", "degraded", "partial", "incident", "major", "disruption", "disruptions"]
+    negative_keywords: ["resolved", "postmortem"]
+    route:
+      channel: "#sev-platform"
+
+  - name: "Facebook Marketing API"
+    url: "https://metastatus.com/outage-events-feed-marketing-api.rss"
+    positive_keywords: ["outage", "degraded", "partial", "incident", "major", "disruption", "disruptions"]
+    # inherits defaults for keywords/route
+
+  - name: "Facebook Graph API"
+    url: "https://metastatus.com/outage-events-feed-graph-api.rss"
+    positive_keywords: ["outage", "degraded", "partial", "incident", "major", "disruption", "disruptions"]
+
+  - name: "Facebook Login"
+    url: "https://metastatus.com/outage-events-feed-facebook-login.rss"
+    positive_keywords: ["outage", "degraded", "partial", "incident", "major", "disruption", "disruptions"]
+
+  - name: "Facebook Business Suite"
+    url: "https://metastatus.com/outage-events-feed-fbs.rss"
+    positive_keywords: ["outage", "degraded", "partial", "incident", "major", "disruption", "disruptions"]
+
+  - name: "HubSpot Platform Status"
+    url: "https://status.hubspot.com/history.rss"
+    positive_keywords: ["outage", "degraded", "partial", "incident", "major", "disruptions"]
+
+  - name: "Google Ads"
+    url: "https://ads.google.com/status/publisher/en-IN/feed.atom"
+    positive_keywords: ["outage", "disruption", "incident", "degraded"]
+    negative_keywords: ["restored", "resolved", "information"]
+
+  - name: "Stripe"
+    url: "https://www.stripestatus.com/history.rss"
+    positive_keywords: ["outage", "degraded", "incident", "error", "elevated", "partial"]
+    negative_keywords: ["resolved", "postmortem", "monitoring"]
+
+  - name: "Google Cloud"
+    url: "https://status.cloud.google.com/en/feed.atom"
+    positive_keywords: ["outage", "disruption", "incident", "degraded", "service"]
+    negative_keywords: ["restored", "resolved", "information"]
