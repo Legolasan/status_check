@@ -4,3 +4,4 @@ pyyaml
 python-dotenv
 pytest
 pyyaml 
+jq
