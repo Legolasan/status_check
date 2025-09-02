@@ -77,20 +77,29 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
+          set -euo pipefail
+          WEBHOOK="$(printf %s "${SLACK_WEBHOOK_URL}" | tr -d '\r\n' | xargs || true)"
+          if [ -z "${WEBHOOK}" ]; then
+            echo "SLACK_WEBHOOK_URL is empty. Set repository secret SLACK_WEBHOOK_URL."
+          exit 1
+          fi
+            case "$WEBHOOK" in
+            https://hooks.slack.com/*) : ;;  # looks good
+            *) echo "SLACK_WEBHOOK_URL doesn't look like a Slack webhook URL."; exit 1;;
+          esac
           STATUS="${{ job.status }}"
-          SUMMARY=$(cat run_summary.json 2>/dev/null || echo '{}')
-          if [ "$STATUS" = "success" ]; then EMOJI="✅"; else EMOJI="❗"; fi
-          cat > payload.json <<'JSON'
-            {
-              "blocks": [
-                { "type": "header", "text": { "type": "plain_text", "text": "Status Feeds to Slack — Run Complete" } },
-                { "type": "section", "text": { "type": "mrkdwn", "text": "SUMMARY_PLACEHOLDER" } }
-              ]
-            }
-          JSON
-          SUMMARY_TEXT="*Status:* ${STATUS}\n*Repo:* $GITHUB_REPOSITORY\n*Run:* $GITHUB_RUN_NUMBER\n*Feeds processed:* $(jq -r '.feeds_processed // "?"' <<<"$SUMMARY")\n*Alerts sent:* $(jq -r '.alerts_sent // "?"' <<<"$SUMMARY")"
-          jq --arg t "${EMOJI} ${SUMMARY_TEXT}" '.blocks[1].text.text = $t' payload.json > payload_final.json
-          curl -sS -X POST -H 'Content-type: application/json' --data @payload_final.json "$SLACK_WEBHOOK_URL"
+          EMOJI="❗"; [ "$STATUS" = "success" ] && EMOJI="✅"
+          SUMMARY_JSON="$(cat run_summary.json 2>/dev/null || echo '{}')"
+          FEEDS=$(jq -r '.feeds_processed // "?"' <<<"$SUMMARY_JSON")
+          ALERTS=$(jq -r '.alerts_sent // "?"' <<<"$SUMMARY_JSON")
+          PAYLOAD="$(jq -n --arg t "${EMOJI} Status Feeds to Slack — Run Complete" \
+                    --arg s "*Status:* ${STATUS}\n*Repo:* ${GITHUB_REPOSITORY}\n*Run:* ${GITHUB_RUN_NUMBER}\n*Feeds processed:* ${FEEDS}\n*Alerts sent:* ${ALERTS}" \
+                    '{blocks: [
+                       {type:"header", text:{type:"plain_text", text:$t}},
+                       {type:"section", text:{type:"mrkdwn", text:$s}}
+                     ] }')"
+          curl -sS -X POST -H 'Content-Type: application/json' \
+            --data "$PAYLOAD" "$WEBHOOK"
           
       - name: Commit updated state (if changed)
         run: |
