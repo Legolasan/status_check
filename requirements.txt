@@ -2,3 +2,5 @@ aiohttp
 feedparser
 pyyaml
 python-dotenv
+pytest
+pyyaml 
