@@ -71,7 +71,27 @@ jobs:
           FEEDS_YAML: ./feeds.yml
           STATE_PATH: ./status_state.json
         run: python main.py
-
+        
+      - name: Post run summary to Slack (Webhook)
+        if: always()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          STATUS="${{ job.status }}"
+          SUMMARY=$(cat run_summary.json 2>/dev/null || echo '{}')
+          if [ "$STATUS" = "success" ]; then EMOJI="✅"; else EMOJI="❗"; fi
+          cat > payload.json <<'JSON'
+            {
+              "blocks": [
+                { "type": "header", "text": { "type": "plain_text", "text": "Status Feeds to Slack — Run Complete" } },
+                { "type": "section", "text": { "type": "mrkdwn", "text": "SUMMARY_PLACEHOLDER" } }
+              ]
+            }
+          JSON
+          SUMMARY_TEXT="*Status:* ${STATUS}\n*Repo:* $GITHUB_REPOSITORY\n*Run:* $GITHUB_RUN_NUMBER\n*Feeds processed:* $(jq -r '.feeds_processed // "?"' <<<"$SUMMARY")\n*Alerts sent:* $(jq -r '.alerts_sent // "?"' <<<"$SUMMARY")"
+          jq --arg t "${EMOJI} ${SUMMARY_TEXT}" '.blocks[1].text.text = $t' payload.json > payload_final.json
+          curl -sS -X POST -H 'Content-type: application/json' --data @payload_final.json "$SLACK_WEBHOOK_URL"
+          
       - name: Commit updated state (if changed)
         run: |
           if git diff --quiet --exit-code -- status_state.json; then
