@@ -47,6 +47,13 @@ jobs:
   monitor:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      FEEDS_YAML: ./feeds.yml
+      STATE_PATH: ./status_state.json
+      RUN_SUMMARY_PATH: ./run_summary.json
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
