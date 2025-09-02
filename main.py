@@ -212,7 +212,7 @@ async def main_async() -> None:
     save_state(state)
     logging.info("Processed %d feeds, sent %d alerts", len(cfg["feeds"]), total)
 
-if __name__ == "__main__":
+def main():
     # Optional: load .env if you use python-dotenv
     try:
         from dotenv import load_dotenv
@@ -220,3 +220,6 @@ if __name__ == "__main__":
     except Exception:
         pass
     asyncio.run(main_async())
+
+if __name__ == "__main__":
+    main()
