@@ -211,6 +211,13 @@ async def main_async() -> None:
             total += r
     save_state(state)
     logging.info("Processed %d feeds, sent %d alerts", len(cfg["feeds"]), total)
+    summary_path = os.environ.get("RUN_SUMMARY_PATH", "./run_summary.json")
+    summary = {
+    "feeds_processed": len(cfg["feeds"]),
+    "alerts_sent": total,
+    }
+    with open(summary_path, "w") as f:
+        json.dump(summary, f)
 
 def main():
     # Optional: load .env if you use python-dotenv
