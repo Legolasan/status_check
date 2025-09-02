@@ -21,6 +21,14 @@ jobs:
         run: |
           pip install -r requirements.txt
 
+      - name: List repo files (debug)
+        run: |
+          pwd
+          ls -R
+
+      - name: Test with pytest
+        run: pytest -q
+
       - name: Run status monitor
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
